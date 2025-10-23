@@ -8,11 +8,10 @@ import java.util.UUID;
 public class GameState implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    public String id;
-
-    public List<String> deck;
-    public List<String> playerHand;
-    public List<String> dealerHand;
+    private String id;
+    public List<Card> deck;
+    public List<Card> playerHand;
+    public List<Card> dealerHand;
     public int playerBet;
     public boolean isPlayerTurn;
     public String statusMessage;
@@ -31,7 +30,46 @@ public class GameState implements Serializable {
         return id;
     }
 
+    // convenience for older code that used getGameId()
+    public String getGameId() {
+        return id;
+    }
+
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * Calculates the value of a given hand, handling Aces as 1 or 11.
+     */
+    public int getHandValue(List<Card> hand) {
+        int value = 0;
+        int aces = 0;
+        for (Card card : hand) {
+            value += card.getValue();
+            if (card.getValue() == 11) { // Ace
+                aces++;
+            }
+        }
+        // Handle Aces: if value > 21, change Ace from 11 to 1
+        while (value > 21 && aces > 0) {
+            value -= 10;
+            aces--;
+        }
+        return value;
+    }
+
+    public int getPlayerValue() {
+        return getHandValue(playerHand);
+    }
+
+    public int getDealerValue() {
+        return getHandValue(dealerHand);
+    }
+
+    @Override
+    public String toString() {
+        return "GameState{id=" + id + ", playerHand=" + playerHand + ", dealerHand=" + dealerHand +
+                ", bet=" + playerBet + ", status='" + statusMessage + "'}";
     }
 }

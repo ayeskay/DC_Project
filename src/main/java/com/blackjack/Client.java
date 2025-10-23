@@ -12,18 +12,29 @@ public class Client {
             System.out.println("Could not retrieve game state.");
             return;
         }
-        System.out.println("Dealer's Hand: " + state.dealerHand);
-        System.out.println("Your Hand: " + state.playerHand);
+
+        // Show dealer's hand
+        if (state.isPlayerTurn && state.dealerHand.size() > 0) {
+            // Hide dealer's second card if it's the player's turn
+            System.out.println("Dealer's Hand: [" + state.dealerHand.get(0) + ", (Hidden)]");
+        } else {
+            // Show full dealer hand when game is over or not started
+            System.out.println("Dealer's Hand: " + state.dealerHand + " (Value: " + state.getDealerValue() + ")");
+        }
+
+        // Show player's hand
+        System.out.println("Your Hand: " + state.playerHand + " (Value: " + state.getPlayerValue() + ")");
+
         System.out.println("\nServer Status: " + state.statusMessage);
         System.out.println("----------------------------------------");
     }
 
     public static void main(String[] args) {
         try {
-            Registry registry = LocateRegistry.getRegistry("localhost");
+            Registry registry = LocateRegistry.getRegistry("localhost"); // Connects to 1099
 
             System.out.println("Contacting Load Balancer...");
-            LoadBalancerInterface lb = (LoadBalancerInterface) registry.lookup("BlackjackLoadBalancer");
+            LoadBalancerInterface lb = (LoadBalancerInterface) registry.lookup("LoadBalancer");
 
             String gameServerName = lb.getAvailableGameServer();
             System.out.println("Load Balancer assigned us to server: " + gameServerName);
@@ -45,7 +56,11 @@ public class Client {
                     System.out.print("Enter your bet amount: ");
                     try {
                         int bet = Integer.parseInt(scanner.nextLine());
-                        currentState = gameServer.placeBet(myGameId, bet);
+                        if (bet > 0) {
+                            currentState = gameServer.placeBet(myGameId, bet);
+                        } else {
+                            System.out.println("Bet must be a positive number.");
+                        }
                     } catch (NumberFormatException e) {
                         System.out.println("Invalid bet. Please enter a number.");
                     }
@@ -61,12 +76,16 @@ public class Client {
                         System.out.println("Invalid action. Please enter 'hit' or 'stand'.");
                     }
                 } else {
+                    // Game is over (isPlayerTurn is false and not waiting for bet)
                     System.out.print("Game Over. Play again? (yes / no): ");
                     String choice = scanner.nextLine().trim().toLowerCase();
                     if ("yes".equals(choice)) {
                         System.out.println("Starting a new game...");
+                        // Re-contact load balancer for fault tolerance
                         gameServerName = lb.getAvailableGameServer();
+                        System.out.println("Load Balancer assigned us to server: " + gameServerName);
                         gameServer = (GameInterface) registry.lookup(gameServerName);
+
                         currentState = gameServer.createNewGame();
                         myGameId = currentState.getId();
                     } else {

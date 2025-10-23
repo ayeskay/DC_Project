@@ -40,8 +40,12 @@ public class LoadBalancer implements LoadBalancerInterface {
             LoadBalancer lb = new LoadBalancer();
             LoadBalancerInterface stub = (LoadBalancerInterface) UnicastRemoteObject.exportObject(lb, 0);
 
-            Registry registry = LocateRegistry.createRegistry("localhost");
-            registry.bind("BlackjackLoadBalancer", stub);
+            // --- THIS IS THE FIX ---
+            // Get the registry created by 'rmiregistry' instead of creating a new one
+            Registry registry = LocateRegistry.getRegistry(1099);
+            // --- END OF FIX ---
+
+            registry.bind("LoadBalancer", stub);
 
             System.out.println("Load Balancer is ready.");
         } catch (Exception e) {
